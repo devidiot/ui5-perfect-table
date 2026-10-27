@@ -1,0 +1,19 @@
+<mvc:View controllerName="poc.app.controller.V4" height="100%" xmlns="sap.m" xmlns:f="sap.f" xmlns:mvc="sap.ui.core.mvc" xmlns:pt="mdpert.perfecttable">
+	<f:DynamicPage id="page" headerExpanded="true" fitContent="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="OData V4 (온전)"/></f:heading>
+				<f:expandedContent><Text id="info"/></f:expandedContent>
+				<f:navigationActions><Button icon="sap-icon://home" tooltip="홈" press=".onNavHome"/></f:navigationActions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:header>
+			<f:DynamicPageHeader pinnable="true">
+				<pt:PerfectFilter id="filter"/>
+			</f:DynamicPageHeader>
+		</f:header>
+		<f:content>
+			<pt:PerfectTable id="table" filter="filter" kind="v4" url="/odata/v4/catalog" entitySet="Products" hide="ID,createdAt,createdBy,modifiedAt,modifiedBy" header="Products (V4)" loaded=".onLoaded" save=".onSave"/>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

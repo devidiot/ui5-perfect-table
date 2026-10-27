@@ -1,0 +1,35 @@
+{
+  "name": "ui5-perfect-table",
+  "version": "0.0.1",
+  "private": true,
+  "description": "PoC: metadata-driven freestyle Filter+Table library on sap.ui.mdc, backed by CAP (OData V4, V2, half OData, JSON)",
+  "scripts": {
+    "start": "cds serve --port 4104",
+    "watch": "cds watch --port 4104",
+    "test:headless": "node test/headless/smoke.mjs",
+    "test:diag": "node test/headless/diag.mjs",
+    "gen:data": "node db/data/gen-products.js"
+  },
+  "dependencies": {
+    "@cap-js-community/odata-v2-adapter": "^1",
+    "@cap-js/sqlite": "^2",
+    "@sap/cds": "^9",
+    "express": "^4"
+  },
+  "devDependencies": {
+    "playwright": "^1.64.1"
+  },
+  "cds": {
+    "requires": {
+      "db": {
+        "kind": "sqlite",
+        "credentials": {
+          "url": ":memory:"
+        }
+      }
+    },
+    "cov2ap": {
+      "plugin": true
+    }
+  }
+}

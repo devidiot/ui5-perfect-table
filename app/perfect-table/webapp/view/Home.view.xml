@@ -1,0 +1,21 @@
+<mvc:View controllerName="poc.app.controller.Home" xmlns="sap.m" xmlns:mvc="sap.ui.core.mvc" xmlns:app="http://schemas.sap.com/sapui5/extension/sap.ui.core.CustomData/1">
+	<Page id="page" title="Perfect Table PoC — 소스별 화면">
+		<FlexBox wrap="Wrap" class="sapUiSmallMargin">
+			<GenericTile class="sapUiTinyMargin" header="JSON (REST)" subheader="/rest/catalog/Products" press=".onTilePress" app:route="json">
+				<TileContent><ImageContent src="sap-icon://document-text"/></TileContent>
+			</GenericTile>
+			<GenericTile class="sapUiTinyMargin" header="OData V2 (온전)" subheader="/odata/v2/catalog" press=".onTilePress" app:route="v2">
+				<TileContent><ImageContent src="sap-icon://database"/></TileContent>
+			</GenericTile>
+			<GenericTile class="sapUiTinyMargin" header="OData V4 (온전)" subheader="/odata/v4/catalog" press=".onTilePress" app:route="v4">
+				<TileContent><ImageContent src="sap-icon://database"/></TileContent>
+			</GenericTile>
+			<GenericTile class="sapUiTinyMargin" header="반쪽 OData V2 (RFC 래핑)" subheader="/odata/v2/legacy · $filter 무시, 저장은 액션" press=".onTilePress" app:route="legacyV2">
+				<TileContent><ImageContent src="sap-icon://connected"/></TileContent>
+			</GenericTile>
+			<GenericTile class="sapUiTinyMargin" header="반쪽 OData V4" subheader="/odata/v4/legacy · GridTable" press=".onTilePress" app:route="legacyV4">
+				<TileContent><ImageContent src="sap-icon://grid"/></TileContent>
+			</GenericTile>
+		</FlexBox>
+	</Page>
+</mvc:View>

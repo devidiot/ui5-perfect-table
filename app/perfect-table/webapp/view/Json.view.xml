@@ -1,0 +1,19 @@
+<mvc:View controllerName="poc.app.controller.Json" height="100%" xmlns="sap.m" xmlns:f="sap.f" xmlns:mvc="sap.ui.core.mvc" xmlns:pt="mdpert.perfecttable">
+	<f:DynamicPage id="page" headerExpanded="true" fitContent="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="JSON (REST)"/></f:heading>
+				<f:expandedContent><Text id="info"/></f:expandedContent>
+				<f:navigationActions><Button icon="sap-icon://home" tooltip="홈" press=".onNavHome"/></f:navigationActions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:header>
+			<f:DynamicPageHeader pinnable="true">
+				<pt:PerfectFilter id="filter"/>
+			</f:DynamicPageHeader>
+		</f:header>
+		<f:content>
+			<pt:PerfectTable id="table" filter="filter" kind="json" url="/rest/catalog/Products" header="Products (JSON)" loaded=".onLoaded" save=".onSave"/>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

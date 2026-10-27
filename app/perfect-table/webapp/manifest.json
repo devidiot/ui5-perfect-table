@@ -1,0 +1,43 @@
+{
+	"_version": "1.60.0",
+	"sap.app": {
+		"id": "poc.app",
+		"type": "application",
+		"title": "Perfect Table PoC",
+		"applicationVersion": { "version": "0.0.2" }
+	},
+	"sap.ui": { "technology": "UI5", "deviceTypes": { "desktop": true, "tablet": true, "phone": true } },
+	"sap.ui5": {
+		"flexEnabled": true,
+		"dependencies": {
+			"minUI5Version": "1.136.0",
+			"libs": { "sap.m": {}, "sap.f": {}, "sap.ui.core": {}, "sap.ui.mdc": {}, "sap.ui.fl": {}, "mdpert.perfecttable": {} }
+		},
+		"contentDensities": { "compact": true, "cozy": true },
+		"rootView": { "viewName": "poc.app.view.App", "type": "XML", "async": true, "id": "root" },
+		"models": {},
+		"routing": {
+			"config": {
+				"routerClass": "sap.m.routing.Router",
+				"type": "View", "viewType": "XML", "path": "poc.app.view",
+				"controlId": "app", "controlAggregation": "pages", "async": true
+			},
+			"routes": [
+				{ "name": "home",     "pattern": "",         "target": "home" },
+				{ "name": "json",     "pattern": "json",     "target": "json" },
+				{ "name": "v2",       "pattern": "v2",       "target": "v2" },
+				{ "name": "v4",       "pattern": "v4",       "target": "v4" },
+				{ "name": "legacyV2", "pattern": "legacyV2", "target": "legacyV2" },
+				{ "name": "legacyV4", "pattern": "legacyV4", "target": "legacyV4" }
+			],
+			"targets": {
+				"home":     { "name": "Home",     "id": "home" },
+				"json":     { "name": "Json",     "id": "json" },
+				"v2":       { "name": "V2",       "id": "v2" },
+				"v4":       { "name": "V4",       "id": "v4" },
+				"legacyV2": { "name": "LegacyV2", "id": "legacyV2" },
+				"legacyV4": { "name": "LegacyV4", "id": "legacyV4" }
+			}
+		}
+	}
+}

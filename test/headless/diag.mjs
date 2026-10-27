@@ -1,0 +1,16 @@
+import { chromium } from "playwright";
+const BASE = process.argv[2] || "http://localhost:4104";
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
+const logs = [];
+page.on("console", (m) => logs.push(m.type() + ": " + m.text()));
+page.on("pageerror", (e) => logs.push("pageerror: " + e.message));
+page.on("requestfailed", (r) => logs.push("reqfail: " + r.url() + " " + r.failure()?.errorText));
+page.on("response", (r) => { if (r.status() >= 400) logs.push("http " + r.status() + " " + r.url()); });
+await page.goto(`${BASE}/perfect-table/webapp/index.html`, { waitUntil: "load" });
+await page.waitForFunction(() => { const E = sap.ui.require("sap/ui/core/Element"); return E && E.getElementById("app---main--tabs"); }, null, { timeout: 30000 }).catch((e) => logs.push("WAIT TIMEOUT: " + e.message));
+const ids = await page.evaluate(() => { const E = sap.ui.require("sap/ui/core/Element"); const out = []; E.registry.forEach((e) => { if (/tabs|ptJson|main/.test(e.getId())) out.push(e.getId() + " " + e.getMetadata().getName()); }); return out.slice(0, 20); });
+console.log("IDS:", ids);
+console.log(logs.filter((l) => !/^log:|^debug:/.test(l)).slice(0, 40).join("\n"));
+await page.screenshot({ path: "test/headless/out/diag.png" });
+await browser.close();
