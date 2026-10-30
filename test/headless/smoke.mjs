@@ -131,6 +131,15 @@ const after = await ui5((byId, tbl, vm) => ({ cols: byId(tbl).getColumns().map((
 check("변형 선택 → Supplier 숨김 복원", !after.cols.includes("Supplier") && after.title.includes("PoC 변형"), `cols=${after.cols.length} title="${after.title}"`);
 await page.screenshot({ path: path.join(OUT, "05-after-reload.png") });
 
+// 4-1. 표 설정(톱니바퀴) 대화상자가 열린다 (필터 탭이 필드를 못 만들면 대화상자 전체가 안 열린다)
+const errBefore = consoleErrors.length;
+await page.click(`#${TBL}-settings`);
+const gearOpened = await page.waitForSelector(".sapMDialog .sapMITBHead", { timeout: 15000 }).then(() => true).catch(() => false);
+check("표 설정(톱니바퀴) 대화상자 열림", gearOpened && consoleErrors.length === errBefore, consoleErrors.slice(errBefore).join(" | ").slice(0, 200));
+await page.screenshot({ path: path.join(OUT, "05-1-table-settings.png") });
+await page.keyboard.press("Escape");
+await page.waitForSelector(".sapMDialog", { state: "detached", timeout: 10000 }).catch(() => {});
+
 // 5. 붙여넣기 → 신규 행(C) + 타입 파싱
 await applyState(FB, { filter: { Category: [{ operator: "EQ", values: ["Laptop"], filtered: false }], Price: [{ operator: "GT", values: ["1000"], filtered: false }] } });
 await page.waitForTimeout(800);

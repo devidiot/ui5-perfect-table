@@ -44,6 +44,7 @@
 | Variant 를 저장했는데 재접속하면 표준뷰 | 저장 때 "기본값" 을 켜지 않으면 표준뷰가 뜨는 게 정상이다 | 목록에서 고르면 복원된다. 테스트도 그 흐름으로 바꿨다 |
 | `sap.ui.fl` 이 `changes/flexibility-bundle.json` 404 | 빌드하지 않은 앱이라 번들이 없다 | 빈 번들 파일을 둔다 (빌드하면 자동 생성) |
 | `Component-preload.js`·`library-preload.js` 404 | 빌드 없는 로컬 실행 | `data-sap-ui-xx-componentPreload="off"`, `data-sap-ui-xx-libraryPreloadFiles="mdpert.perfecttable:none"` |
+| 표 설정(톱니바퀴)을 눌러도 아무것도 안 뜬다. 콘솔에 `No FilterField could be created for property: 'Supplier'` 가 속성마다 | 대화상자의 "필터" 탭(`p13nMode` 의 `Filter`)은 `TableDelegate.getFilterDelegate().addItem` 으로 필드를 만든다. 기본 구현은 예외를 던지고, 그러면 대화상자 전체가 안 열린다. 헤드리스가 톱니바퀴를 누르지 않아 PoC 0 에서 놓쳤다 (2026-10-30 발견) | `BufferTableDelegate.getFilterDelegate()` 가 필터 바와 같은 `createFilterField` 로 필드를 만든다. 표 PropertyInfo 에도 필터와 같은 `maxConditions` 를 넣어야 `PropertyInfoValidator` 경고가 안 난다 |
 | CopyProvider 가 빈 배열 | 삭제 뒤 `clearSelection()` 한 상태에서 호출했다 | 테스트 순서 문제. 플러그인은 정상 |
 
 ## 재사용 모습 (2026-10-27 분리)
