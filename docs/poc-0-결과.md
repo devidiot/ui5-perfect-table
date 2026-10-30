@@ -17,7 +17,7 @@
 | 필터 바 | `sap.ui.mdc.FilterBar` + 자체 delegate | 문자열·숫자·날짜·Boolean 조건, 기본 검색(문자열 전체 Contains) |
 | 필터·정렬 | `ListBinding.filter/sort` (클라이언트) | Decimal 이 문자열이라 숫자 비교 함수를 Filter·Sorter 에 붙여 해결 |
 | 컬럼 선택·정렬·그룹 개인화 | `mdc.Table p13nMode` | 컬럼 숨김이 즉시 반영 |
-| Variant | `sap.ui.fl.variants.VariantManagement` + `LocalStorageConnector` | "다른 이름으로 저장" → 재접속 → 목록에서 선택 → 컬럼 상태 복원 |
+| Variant | `sap.ui.comp.smartvariants.SmartVariantManagement` 페이지 변형 (2026-10-30, 아래 절) | "다른 이름으로 저장" → 재접속 → 목록에서 선택 → 컬럼 상태 복원. LocalStorage 와 S/4HANA LREP 둘 다 |
 | 복사 | `sap.m.plugins.CellSelector` + `CopyProvider` | 선택 행의 2차원 배열 (표시 형식 그대로) |
 | 붙여넣기 | `mdc.Table paste` 이벤트 | 보이는 컬럼 순서로 칸을 맞춰 신규 행(C) 생성, 타입별 파싱(`1,234.50`→`1234.5`, `Yes`→`true`) |
 | 셀 편집 | `sap.ui.mdc.Field` 의 `editMode` 바인딩 | 템플릿 교체 없이 보기/편집 전환. 키 필드는 신규 행에서만 열림, 삭제 표시 행은 잠김. 수정하면 상태 U |
@@ -80,6 +80,37 @@
 11. **표 하나에 필터 없이, 또는 필터 하나에 표 둘**: 구조상 되지만 아직 화면으로 확인하지 않았다.
 5. **값 도움말**: `mdc.ValueHelp` + 버퍼 delegate (고정값 목록부터).
 6. **엑셀 가져오기**: SheetJS 로 파싱 → 붙여넣기 경로로 합류.
-7. **Variant 를 LREP 로**: ABAP BSP 로 배포하고 `flexibilityServices` 를 떼면 서버 USER 레이어에 저장되는지. FLP 에서 확인.
+7. ~~**Variant 를 LREP 로**~~: 2026-10-30 로컬 프록시로 S/4HANA LREP 저장까지 확인(아래 절). BSP 배포 후 FLP 에서 로그온 사용자로 저장되는지는 아직이다.
 8. **라이브러리 빌드**: ui5-tooling `library.js` 빌드, 앱 `manifest.json` 의존성, BSP 배포.
 9. **대량 데이터**: 버퍼 모드는 클라이언트 처리라 수만 행이면 느리다. 상한을 재고, 넘으면 서버 모드나 RFC 조건으로 유도한다.
+
+## 페이지 변형 — S/4HANA LREP 저장 (2026-10-30)
+
+### 결론
+
+필터 조건과 표 상태(컬럼·정렬·그룹·표 필터·폭)를 **변형 하나**로 묶어 S/4HANA LREP 에 저장한다. S/4HANA V2 List Report·SmartFilterBar 가 쓰는 SmartVariantManagement 페이지 변형과 같은 모양이다.
+S/4HANA 개발 시스템 LREP 에서 `fileType: variant`, `changeType: page`, `layer: USER`, `selector.persistencyKey: json--filter` 로 저장된 것을 직접 조회해 확인했다. 헤드리스는 LocalStorage·LREP 두 모드 모두 38/38 이다. 톱니바퀴로 컬럼을 숨긴 뒤 변형으로 저장하고, 재접속해서 그 변형을 고르면 숨김이 복원되는 것까지 화면 클릭으로 확인했다.
+
+### 구조
+
+| 부품 | 역할 |
+|---|---|
+| `SmartVariantManagement`(`persistencyKey`) | 변형 목록·저장 대화상자(기본값·공용·자동으로 적용)·뷰 관리. flex 의 compVariant 로 LREP 에 쓴다 |
+| `PersonalizableInfo`(`type: "page"`, `keyName: "persistencyKey"`, `control: PerfectFilter`) | PerfectFilter 를 "개인화 컨트롤"로 등록한다 |
+| `PerfectFilter.fetchVariant()` / `applyVariant(content)` | SVM 이 부르는 두 메서드. 내용은 `{ filter, tables: { <로컬 ID>: 표 상태 } }` |
+| `sap.m.p13n.PersistenceProvider`(`mode: "Transient"`) | mdc 개인화를 flex 에 쓰지 않고 메모리에만 둔다. 저장은 SVM 하나가 맡는다 |
+| `sap.ui.mdc.p13n.StateUtil` | 상태 읽기(`retrieveExternalState`)·차이(`diffState`)·적용(`applyExternalState`). 전부 공개 API |
+
+`variantMode="control"` 로 두면 예전처럼 `sap.ui.fl.variants.VariantManagement` 컨트롤 변형을 쓴다.
+
+### 걸린 함정
+
+| 증상 | 원인 | 해결 |
+|---|---|---|
+| 저장할 때 `'_newVariant' throws an exception: Parameter 'reference' is missing` | SVM 을 스키마를 읽은 뒤 비동기로 만들어 소유 컴포넌트가 없었다. flex 는 앱 컴포넌트로 저장 위치를 정한다 | `oComponent.runAsOwner(() => new SmartVariantManagement(...))` |
+| `fetchVariant` 에 상태를 바로 줄 수 없다 | SVM 은 표준 변형을 잡을 때 `fetchVariant` 를 동기로 부르는데 `StateUtil.retrieveExternalState` 는 Promise 다 | 상태를 캐시해 두고 `StateUtil.attachStateChange`·`filtersChanged` 때마다 갱신. `initialise` 전에 한 번 채운다 |
+| 변형을 바꾸면 이전 변형의 컬럼·조건이 남는다 | `applyExternalState` 는 준 만큼만 바꾼다 | 현재 상태와의 `diffState` 를 적용한다 |
+| 변형 저장 후 다시 "*"(수정됨)가 붙는다 | 적용이 일으킨 stateChange 가 뒤따라온다 | 적용 중 플래그를 한 틱 늦게 푼다 |
+| 표 상태를 전체 ID 로 저장하면 FLP 에서 못 찾는다 | FLP 에서는 컴포넌트 ID 가 바뀐다 | `Component.getLocalId()` 로 컴포넌트 기준 로컬 ID 를 키로 쓴다 |
+| 로컬에서 LREP 를 부르면 HTML 로그온 페이지(200) | LREP ICF 는 인증 없는 요청에 Basic 인증 요구(401)가 아니라 로그온 폼을 준다. 브라우저 인증 창이 뜨지 않는다 | 로컬 서버 프록시가 Basic 인증을 붙인다. 쿠키의 `Secure`·`SameSite=None` 을 떼야 http://localhost 에서 CSRF 세션이 유지된다 |
+| LREP 에서 변형을 `DELETE /sap/bc/lrep/changes/<id>` 로 지우면 404 (기본값 change 는 204 로 지워짐) | 변형(fileType variant)을 지우는 REST 경로는 아직 확인하지 못했다 | 화면의 "뷰 관리"에서 지운다 |

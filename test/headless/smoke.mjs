@@ -1,10 +1,12 @@
 // PoC 0 헤드리스 검증 (타일 홈 + 화면 5개, DynamicPage + PerfectFilter + PerfectTable). 서버(cds serve, 기본 4104)가 떠 있어야 한다.
-//   node test/headless/smoke.mjs [baseUrl]
+//   node test/headless/smoke.mjs [baseUrl] [page]   page 기본 index.html(LocalStorage), index-s4.html 이면 S/4HANA LREP
 import { chromium } from "playwright";
 import path from "node:path";
 import fs from "node:fs";
 
 const BASE = process.argv[2] || "http://localhost:4104";
+const PAGE = process.argv[3] || "index.html";
+const IS_LREP = PAGE.includes("s4");
 const OUT = path.resolve("test/headless/out");
 fs.mkdirSync(OUT, { recursive: true });
 const pfx = (key) => `container-app---${key}--`;
@@ -36,6 +38,9 @@ const applyState = (id, state) => page.evaluate(async ({ id, state }) => {
 
 const waitEl = (id) => page.waitForFunction((id) => { const E = sap.ui.require("sap/ui/core/Element"); return E && E.getElementById(id); }, id, { timeout: 60000 });
 const waitView = () => waitEl("container-app---home--page");
+// 페이지 변형(SmartVariantManagement)은 표·필터 바 초기화 뒤 비동기로 붙는다. 기본 변형 적용까지 기다린다
+const waitVariant = (filterId) => page.waitForFunction((id) => { const f = sap.ui.require("sap/ui/core/Element").getElementById(id); return f && f._pPageVariant; }, filterId, { timeout: 60000 })
+  .then(() => page.evaluate((id) => sap.ui.require("sap/ui/core/Element").getElementById(id)._pPageVariant, filterId));
 const waitLoaded = (ptId, min = 1) => page.waitForFunction(({ id, min }) => {
   const E = sap.ui.require("sap/ui/core/Element"); const pt = E.getElementById(id); return pt && pt.getRows && pt.getRows().length >= min;
 }, { id: ptId, min }, { timeout: 60000 });
@@ -48,9 +53,9 @@ const waitBindingLength = (tableId, n) => page.waitForFunction(({ id, n }) => {
 }, { id: tableId, n }, { timeout: 15000 }).then(() => true).catch(() => false);
 const bindingLength = (tableId) => ui5((byId, id) => byId(id).getRowBinding().getLength(), tableId);
 // 화면 이동: 라우팅으로 뷰가 생기고 → 표가 스키마를 읽어 필터·표를 만든 뒤 → 행이 들어올 때까지 기다린다
-const go = async (key) => { await page.evaluate((k) => { location.hash = "#/" + k; }, key); await waitEl(pfx(key) + "table"); await waitLoaded(pfx(key) + "table", 1); await waitEl(pfx(key) + "filter--filterbar"); };
+const go = async (key) => { await page.evaluate((k) => { location.hash = "#/" + k; }, key); await waitEl(pfx(key) + "table"); await waitLoaded(pfx(key) + "table", 1); await waitEl(pfx(key) + "filter--filterbar"); await waitVariant(pfx(key) + "filter"); };
 
-await page.goto(`${BASE}/perfect-table/webapp/index.html`, { waitUntil: "load" });
+await page.goto(`${BASE}/perfect-table/webapp/${PAGE}`, { waitUntil: "load" });
 await waitView();
 await page.screenshot({ path: path.join(OUT, "00-home.png") });
 
@@ -75,8 +80,8 @@ for (const t of TABS) {
   check(`${t.key} 로드`, info.rows === 300, `rows=${info.rows} props=${info.props} cols=${info.cols} odata=${info.odata} cap=${JSON.stringify(info.cap)} actions=${info.actions}`);
   check(`${t.key} 라벨 (ProductID/Price/ReleaseDate)`, info.labels.join() === "제품 ID,단가,출시일", info.labels.join());
   const layout = await ui5((byId, key) => { const E = (id) => byId(id); const fb = E(key + "filter--filterbar"), vm = E(key + "filter--variant"), pg = E(key + "page");
-    return { page: pg && pg.getMetadata().getName(), fb: !!fb, fbItems: fb && fb.getFilterItems().length, vm: vm && vm.getFor().length, filterAssoc: E(key + "table--table").getFilter() === (fb && fb.getId()) }; }, pfx(t.key));
-  check(`${t.key} DynamicPage + PerfectFilter 연결`, layout.page === "sap.f.DynamicPage" && layout.fb && layout.fbItems > 0 && layout.vm === 2 && layout.filterAssoc, JSON.stringify(layout));
+    return { page: pg && pg.getMetadata().getName(), fb: !!fb, fbItems: fb && fb.getFilterItems().length, vm: vm && vm.getMetadata().getName(), filterAssoc: E(key + "table--table").getFilter() === (fb && fb.getId()) }; }, pfx(t.key));
+  check(`${t.key} DynamicPage + PerfectFilter 연결`, layout.page === "sap.f.DynamicPage" && layout.fb && layout.fbItems > 0 && layout.vm === "sap.ui.comp.smartvariants.SmartVariantManagement" && layout.filterAssoc, JSON.stringify(layout));
   console.log(`      types=${info.types}\n      sample=${JSON.stringify(info.sample)}`);
   await page.screenshot({ path: path.join(OUT, `01-${t.key}.png`) });
 }
@@ -101,34 +106,43 @@ const sorted = await ui5((byId, id) => byId(id).getRowBinding().getContexts(0, 3
 check("JSON 정렬 Price desc (숫자 비교)", Number(sorted[0]) >= Number(sorted[1]) && Number(sorted[1]) >= Number(sorted[2]), `top3=${sorted}`);
 await page.screenshot({ path: path.join(OUT, "03-sort.png") });
 
-// 4. 컬럼 개인화 (Supplier 숨김) → Variant "다른 이름으로 저장" → LocalStorage → 재접속 후 유지
+// 4. 컬럼 개인화 (Supplier 숨김) → 페이지 변형 "다른 이름으로 저장" → LocalStorage 또는 S/4HANA LREP → 재접속 후 유지
 const colsBefore = await ui5((byId, id) => byId(id).getColumns().length, TBL);
 await applyState(TBL, { items: [{ name: "Supplier", visible: false }] });
 await page.waitForTimeout(1200);
 const colsAfter = await ui5((byId, id) => byId(id).getColumns().length, TBL);
 check("컬럼 개인화 Supplier 숨김", colsAfter === colsBefore - 1, `before=${colsBefore} after=${colsAfter}`);
-await page.click(`#${VM} button`);
+const modified = await ui5((byId, vm) => byId(vm).currentVariantGetModified(), VM);
+check("개인화 → 변형 수정 표시(*)", modified === true);
+const VARIANT_NAME = IS_LREP ? `PoC 변형 ${Date.now() % 100000}` : "PoC 변형";
+const lrepWrites = [];
+page.on("response", (r) => { if (r.url().includes("/sap/bc/lrep/") && r.request().method() === "POST") lrepWrites.push(`${r.status()} ${new URL(r.url()).pathname}`); });
+await page.click(`#${VM}-vm-trigger`);
 await page.click(`#${VM}-vm-saveas`);
 await page.waitForSelector(".sapMDialog input", { timeout: 10000 });
-await page.fill(".sapMDialog input >> nth=0", "PoC 변형");
+await page.fill(".sapMDialog input >> nth=0", VARIANT_NAME);
 await page.click(".sapMDialog button:has-text('저장')");
 await page.waitForTimeout(1500);
-const flKeys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("sap.ui.fl")));
-check("Variant 저장 → sap.ui.fl LocalStorage", flKeys.length > 0, `keys=${flKeys.length} ${flKeys.slice(0, 3).join(",")}`);
+if (IS_LREP) {
+  check("페이지 변형 저장 → S/4HANA LREP POST /variants", lrepWrites.some((w) => w.startsWith("200 /sap/bc/lrep/variants")), lrepWrites.join(", "));
+} else {
+  const flKeys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("sap.ui.fl")));
+  check("페이지 변형 저장 → sap.ui.fl LocalStorage", flKeys.length > 0, `keys=${flKeys.length} ${flKeys.slice(0, 3).join(",")}`);
+}
 await page.screenshot({ path: path.join(OUT, "04-variant-saved.png") });
 
 await page.reload({ waitUntil: "load" });   // 해시 #/json 유지 → 같은 화면
-await waitEl(PT); await waitLoaded(PT, 300); await waitRendered(TBL);
+await waitEl(PT); await waitLoaded(PT, 300); await waitRendered(TBL); await waitVariant(pfx("json") + "filter");
 await page.waitForTimeout(2000);
 // 기본값으로 저장하지 않았으니 재접속 직후는 표준뷰다. 목록에서 저장한 변형을 고르면 컬럼 상태가 돌아와야 한다
 const titleBefore = await ui5((byId, vm) => document.getElementById(vm).textContent.trim().slice(0, 40), VM);
-await page.click(`#${VM} button`);
+await page.click(`#${VM}-vm-trigger`);
 await page.waitForSelector(".sapMPopover", { timeout: 10000 });
-const listed = await page.locator(".sapMPopover li:has-text('PoC 변형')").count();
+const listed = await page.locator(`.sapMPopover li:has-text('${VARIANT_NAME}')`).count();
 check("재접속 후 Variant 목록에 저장한 변형이 있음", listed > 0, `before="${titleBefore}" listed=${listed}`);
-if (listed) { await page.click(".sapMPopover li:has-text('PoC 변형')"); await page.waitForTimeout(2000); }
+if (listed) { await page.click(`.sapMPopover li:has-text('${VARIANT_NAME}')`); await page.waitForTimeout(2000); }
 const after = await ui5((byId, tbl, vm) => ({ cols: byId(tbl).getColumns().map((c) => c.getPropertyKey()), title: document.getElementById(vm).textContent.trim().slice(0, 40) }), TBL, VM);
-check("변형 선택 → Supplier 숨김 복원", !after.cols.includes("Supplier") && after.title.includes("PoC 변형"), `cols=${after.cols.length} title="${after.title}"`);
+check("변형 선택 → Supplier 숨김 복원", !after.cols.includes("Supplier") && after.title.includes(VARIANT_NAME), `cols=${after.cols.length} title="${after.title}"`);
 await page.screenshot({ path: path.join(OUT, "05-after-reload.png") });
 
 // 4-1. 표 설정(톱니바퀴) 대화상자가 열린다 (필터 탭이 필드를 못 만들면 대화상자 전체가 안 열린다)

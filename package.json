@@ -5,6 +5,7 @@
   "description": "PoC: metadata-driven freestyle Filter+Table library on sap.ui.mdc, backed by CAP (OData V4, V2, half OData, JSON)",
   "scripts": {
     "start": "cds serve --port 4104",
+    "start:s4": "SAP_ENV_FILE=${SAP_ENV_FILE:-../../rap-guideline-docs/.env} cds serve --port 4104",
     "watch": "cds watch --port 4104",
     "test:headless": "node test/headless/smoke.mjs",
     "test:diag": "node test/headless/diag.mjs",
