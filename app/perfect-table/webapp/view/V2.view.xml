@@ -1,4 +1,4 @@
-<mvc:View controllerName="poc.app.controller.V2" height="100%" xmlns="sap.m" xmlns:f="sap.f" xmlns:mvc="sap.ui.core.mvc" xmlns:pt="mdpert.perfecttable">
+<mvc:View controllerName="poc.app.controller.V2" height="100%" xmlns="sap.m" xmlns:f="sap.f" xmlns:mvc="sap.ui.core.mvc" xmlns:sj="starj.ui5.table">
 	<f:DynamicPage id="page" headerExpanded="true" fitContent="false">
 		<f:title>
 			<f:DynamicPageTitle>
@@ -9,11 +9,11 @@
 		</f:title>
 		<f:header>
 			<f:DynamicPageHeader pinnable="true">
-				<pt:PerfectFilter id="filter"/>
+				<sj:FilterBar id="filter"/>
 			</f:DynamicPageHeader>
 		</f:header>
 		<f:content>
-			<pt:PerfectTable id="table" filter="filter" kind="v2" url="/odata/v2/catalog" entitySet="Products" hide="ID,createdAt,createdBy,modifiedAt,modifiedBy" header="Products (V2)" loaded=".onLoaded" save=".onSave"/>
+			<sj:Table id="table" filter="filter" kind="v2" url="/odata/v2/catalog" entitySet="Products" hide="ID,createdAt,createdBy,modifiedAt,modifiedBy" header="Products (V2)" loaded=".onLoaded" save=".onSave"/>
 		</f:content>
 	</f:DynamicPage>
 </mvc:View>

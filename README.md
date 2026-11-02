@@ -1,6 +1,6 @@
 # ui5-perfect-table — PoC
 
-`sap.ui.mdc` 위에 얹는 **필터 바 + 표 조립 라이브러리**의 개념 검증입니다. 데이터 소스가 JSON 이든, OData V2·V4 든, RFC 를 서비스 바인딩으로 감싼 반쪽짜리 OData 든 **같은 컨트롤 하나**로 개인화·Variant·필터·정렬·복사·붙여넣기·엑셀 내보내기·편집 추적을 쓰는 것이 목표입니다.
+`sap.ui.mdc` 위에 얹는 **필터 바 + 표 조립 라이브러리**의 개념 검증입니다. 라이브러리는 정식 이름 **`starj.ui5.table`** 로 `lib/` 에 있고(아래 "라이브러리" 절), 이 저장소의 PoC 앱이 그것을 소비하며 계속 함께 고쳐 나갑니다. 데이터 소스가 JSON 이든, OData V2·V4 든, RFC 를 서비스 바인딩으로 감싼 반쪽짜리 OData 든 **같은 컨트롤 하나**로 개인화·Variant·필터·정렬·복사·붙여넣기·엑셀 내보내기·편집 추적을 쓰는 것이 목표입니다.
 
 백엔드는 S/4HANA 가 아니라 **CAP(Node.js)** 으로 네 가지 소스를 직접 흉내 냈습니다. 결과와 결정은 [docs/poc-0-결과.md](docs/poc-0-결과.md) 에 있습니다.
 
@@ -12,6 +12,18 @@ npm start                      # http://localhost:4104
 open http://localhost:4104/perfect-table/webapp/index.html   # 타일 홈 → 화면 5개 (#/json, #/v2, #/v4, #/legacyV2, #/legacyV4)
 npm run test:headless          # 서버가 떠 있어야 한다. 스크린샷은 test/headless/out/
 ```
+
+### 라이브러리 (`lib/`, `starj.ui5.table`)
+
+```bash
+npm --prefix lib install       # 처음 한 번 (@ui5/cli, @sap/ux-ui5-tooling)
+npm run build:lib              # lib/dist/resources/starj/ui5/table/ (library-preload.js, manifest.json)
+npm run test:headless:dist     # 앱이 소스 대신 빌드 결과를 읽게 해서 같은 검증 (index.html?lib=dist)
+npm --prefix lib run deploy    # ABAP 저장소 BSP ZSTARJ_TABLE 로 배포. 환경 변수는 lib/ui5-deploy.yaml 머리말
+```
+
+앱은 기본으로 소스(`lib/src`)를 읽으므로 라이브러리를 고치면 새로고침만 하면 됩니다. `?lib=dist` 를 붙이면 빌드 결과를 읽습니다.
+사용법·설계·배포 문서는 rap-guideline-docs 의 `docs/starj-ui5/` 에 있습니다.
 
 ### Variant 를 S/4HANA LREP 에 저장하기
 
@@ -34,27 +46,30 @@ db/            schema.cds, data/pt-Products.csv (300행, gen-products.js 로 재
 srv/           catalog-service   온전한 OData  → /odata/v4/catalog, /odata/v2/catalog (cov2ap)
                legacy-service    반쪽 OData    → /odata/v4/legacy,  /odata/v2/legacy  ($filter 무시, 저장은 액션뿐)
                rest-service      순수 JSON     → /rest/catalog/Products
-lib/mdpert/perfecttable/
-               PerfectFilter.js              필터 바 컨트롤 (mdc FilterBar + 페이지 변형). 소스를 모르고, 표가 넘기는 스키마로 필드를 만든다
-               PerfectTable.js               표 컨트롤 (mdc Table + 툴바 액션 + 버퍼·변경 추적). XML 속성 kind/url/entitySet 로 소스를 받는다
-               schema/Schema.js              중립 스키마 → mdc PropertyInfo, 타입 매핑
-               schema/EdmxSchemaProvider.js  V2·V4 $metadata → 중립 스키마 (라벨·키·쓰기 가능 여부·액션)
-               data/BufferReader.js          전부 읽어 버퍼(JSONModel)에 넣기, 값 표현 통일
-               data/ChangeTracker.js         행 상태(C/U/D)와 변경 묶음
-               delegate/BufferTableDelegate.js, BufferFilterBarDelegate.js, Registry.js
+lib/           라이브러리 프로젝트 starj.ui5.table (package.json, ui5.yaml, ui5-deploy.yaml)
+  src/starj/ui5/table/
+               .library, library.js          라이브러리 정의, enum TableType·VariantMode
+               FilterBar.js                  필터 바 컨트롤 (mdc FilterBar + 페이지 변형). 소스를 모르고, 표가 넘기는 스키마로 필드를 만든다
+               Table.js                      표 컨트롤 (mdc Table + 툴바 액션 + 버퍼·변경 추적). XML 속성 kind/url/entitySet 로 소스를 받는다
+               source/Schema.js              중립 스키마 → mdc PropertyInfo, 타입 매핑
+               source/EdmxSchemaProvider.js  V2·V4 $metadata → 중립 스키마 (라벨·키·쓰기 가능 여부·액션)
+               source/BufferReader.js        전부 읽어 버퍼(JSONModel)에 넣기, 값 표현 통일
+               edit/ChangeTracker.js         행 상태(C/U/D)와 변경 묶음
+               delegate/                     BufferTableDelegate, BufferFilterBarDelegate, Registry (내부용)
+               messagebundle*.properties     화면 문구 (영어 기본, 한국어)
 app/perfect-table/webapp/   PoC 앱. 타일 홈(Home) + 화면 5개(Json · V2 · V4 · LegacyV2 · LegacyV4), 화면마다 View+Controller 한 쌍
-                            모든 화면은 DynamicPage > (header) PerfectFilter + (content) PerfectTable. 공통 코드는 controller/Base.controller.js
-test/headless/ smoke.mjs (playwright, 36개 항목), diag.mjs (콘솔 오류 수집)
+                            모든 화면은 DynamicPage > (header) sj:FilterBar + (content) sj:Table. 공통 코드는 controller/Base.controller.js
+test/headless/ smoke.mjs (playwright, 39개 항목), diag.mjs (콘솔 오류 수집)
 ```
 
 ## 화면 한 장에 필요한 것
 
 ```xml
 <f:DynamicPage>
-  <f:header><f:DynamicPageHeader><pt:PerfectFilter id="filter"/></f:DynamicPageHeader></f:header>
+  <f:header><f:DynamicPageHeader><sj:FilterBar id="filter"/></f:DynamicPageHeader></f:header>
   <f:content>
-    <pt:PerfectTable id="table" filter="filter" kind="v2" url="/odata/v2/catalog" entitySet="Products"
-                     hide="ID,createdAt,createdBy,modifiedAt,modifiedBy" save=".onSave"/>
+    <sj:Table id="table" filter="filter" kind="v2" url="/odata/v2/catalog" entitySet="Products"
+              hide="ID,createdAt,createdBy,modifiedAt,modifiedBy" save=".onSave"/>
   </f:content>
 </f:DynamicPage>
 ```

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<library xmlns="http://www.sap.com/sap.ui.library.xsd">
+
+	<name>starj.ui5.table</name>
+	<vendor>STARJ</vendor>
+	<version>${version}</version>
+	<copyright></copyright>
+
+	<documentation>Source-agnostic filter bar and table (JSON, OData V2, OData V4) built on sap.ui.mdc, with page variants stored in S/4HANA LREP.</documentation>
+
+	<dependencies>
+		<dependency><libraryName>sap.ui.core</libraryName></dependency>
+		<dependency><libraryName>sap.m</libraryName></dependency>
+		<dependency><libraryName>sap.ui.mdc</libraryName></dependency>
+		<dependency><libraryName>sap.ui.fl</libraryName></dependency>
+		<dependency><libraryName>sap.ui.comp</libraryName></dependency>
+	</dependencies>
+
+	<appData>
+		<manifest xmlns="http://www.sap.com/ui5/buildext/manifest">
+			<i18n>messagebundle.properties</i18n>
+			<supportedLocales>
+				<locale></locale>
+				<locale>en</locale>
+				<locale>ko</locale>
+			</supportedLocales>
+		</manifest>
+	</appData>
+
+</library>

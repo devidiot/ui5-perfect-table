@@ -1,0 +1,14 @@
+{
+  "name": "@starj/ui5-table",
+  "version": "0.1.0",
+  "private": true,
+  "description": "starj.ui5.table - source-agnostic filter bar + table UI5 library (sap.ui.mdc, page variants in S/4HANA LREP)",
+  "scripts": {
+    "build": "ui5 build --clean-dest",
+    "deploy": "npm run build && node --env-file-if-exists=${SAP_ENV_FILE:-../../../rap-guideline-docs/.env} node_modules/@ui5/cli/bin/ui5.cjs build --config ui5-deploy.yaml"
+  },
+  "devDependencies": {
+    "@sap/ux-ui5-tooling": "^1.34.0",
+    "@ui5/cli": "^4.0.71"
+  }
+}

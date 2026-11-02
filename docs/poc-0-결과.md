@@ -43,7 +43,7 @@
 | 편집 전환이 안 보인다 | `Column.setTemplate` 로 바꿔도 ResponsiveTable 의 기존 아이템 셀은 그대로다 | `mdc.Field` + `editMode` 바인딩 |
 | Variant 를 저장했는데 재접속하면 표준뷰 | 저장 때 "기본값" 을 켜지 않으면 표준뷰가 뜨는 게 정상이다 | 목록에서 고르면 복원된다. 테스트도 그 흐름으로 바꿨다 |
 | `sap.ui.fl` 이 `changes/flexibility-bundle.json` 404 | 빌드하지 않은 앱이라 번들이 없다 | 빈 번들 파일을 둔다 (빌드하면 자동 생성) |
-| `Component-preload.js`·`library-preload.js` 404 | 빌드 없는 로컬 실행 | `data-sap-ui-xx-componentPreload="off"`, `data-sap-ui-xx-libraryPreloadFiles="mdpert.perfecttable:none"` |
+| `Component-preload.js`·`library-preload.js` 404 | 빌드 없는 로컬 실행 | `data-sap-ui-xx-componentPreload="off"`, `xx-libraryPreloadFiles: "starj.ui5.table:none"` |
 | 표 설정(톱니바퀴)을 눌러도 아무것도 안 뜬다. 콘솔에 `No FilterField could be created for property: 'Supplier'` 가 속성마다 | 대화상자의 "필터" 탭(`p13nMode` 의 `Filter`)은 `TableDelegate.getFilterDelegate().addItem` 으로 필드를 만든다. 기본 구현은 예외를 던지고, 그러면 대화상자 전체가 안 열린다. 헤드리스가 톱니바퀴를 누르지 않아 PoC 0 에서 놓쳤다 (2026-10-30 발견) | `BufferTableDelegate.getFilterDelegate()` 가 필터 바와 같은 `createFilterField` 로 필드를 만든다. 표 PropertyInfo 에도 필터와 같은 `maxConditions` 를 넣어야 `PropertyInfoValidator` 경고가 안 난다 |
 | CopyProvider 가 빈 배열 | 삭제 뒤 `clearSelection()` 한 상태에서 호출했다 | 테스트 순서 문제. 플러그인은 정상 |
 
@@ -114,3 +114,22 @@ S/4HANA 개발 시스템 LREP 에서 `fileType: variant`, `changeType: page`, `l
 | 표 상태를 전체 ID 로 저장하면 FLP 에서 못 찾는다 | FLP 에서는 컴포넌트 ID 가 바뀐다 | `Component.getLocalId()` 로 컴포넌트 기준 로컬 ID 를 키로 쓴다 |
 | 로컬에서 LREP 를 부르면 HTML 로그온 페이지(200) | LREP ICF 는 인증 없는 요청에 Basic 인증 요구(401)가 아니라 로그온 폼을 준다. 브라우저 인증 창이 뜨지 않는다 | 로컬 서버 프록시가 Basic 인증을 붙인다. 쿠키의 `Secure`·`SameSite=None` 을 떼야 http://localhost 에서 CSRF 세션이 유지된다 |
 | LREP 에서 변형을 `DELETE /sap/bc/lrep/changes/<id>` 로 지우면 404 (기본값 change 는 204 로 지워짐) | 변형(fileType variant)을 지우는 REST 경로는 아직 확인하지 못했다 | 화면의 "뷰 관리"에서 지운다 |
+
+## 정식 라이브러리 `starj.ui5.table` 로 (2026-10-30)
+
+PoC 라이브러리 `mdpert.perfecttable` 을 회사 공통 라이브러리 **`starj.ui5.table`** 로 바꿨다. 이 PoC 저장소와 앱 이름은 그대로 두고, 앱이 새 라이브러리를 소비한다.
+
+| 전 | 후 |
+|---|---|
+| `mdpert.perfecttable.PerfectTable` | `starj.ui5.table.Table` |
+| `mdpert.perfecttable.PerfectFilter` | `starj.ui5.table.FilterBar` |
+| `tableType` 문자열 | enum `starj.ui5.table.TableType` (`ResponsiveTable` · `GridTable`) |
+| `variantMode` `"page"`·`"control"` | enum `starj.ui5.table.VariantMode` (`Page` · `Control`) |
+| `schema/`·`data/` | `source/`(스키마·읽기) · `edit/`(변경 추적) |
+| 화면 문구 한국어 고정 | `messagebundle*.properties` 영어(기본)·한국어 |
+| CSS `mdpertPerfectTable` | `starj-table`, `starj-filter-bar` |
+| `lib/mdpert/perfecttable/` (정적 폴더) | `lib/` UI5 라이브러리 프로젝트 (`ui5 build` → `library-preload.js`·`manifest.json`) |
+
+- 헤드리스는 소스 모드와 빌드 결과 모드(`index.html?lib=dist`) 모두 39/39.
+- ABAP 저장소 배포는 BSP `ZSTARJ_TABLE`, 패키지 `ZSTARJ_UI5` 로 정했다. `ui5-deploy.yaml` 이 접속 정보를 `env:` 로 받는다. 서버가 멈춰 있어 실제 배포는 아직이다. 없는 주소로 돌려 아카이브 생성과 접속 시도까지 확인했다.
+- 배포 설정에서 걸린 것: `ui5 build --clean-dest --config ui5-deploy.yaml` 은 배포 태스크가 `no 'dist' folder found` 오류를 내는데 **빌드는 "succeeded" 로 끝난다**. 먼저 `npm run build` 로 `dist` 를 만든 뒤 배포 빌드를 돌린다. 또 `yes: true` 가 없으면 확인 질문에서 멈춘다.

@@ -1,0 +1,8 @@
+# yaml-language-server: $schema=https://sap.github.io/ui5-tooling/schema/ui5.yaml.json
+specVersion: "4.0"
+type: library
+metadata:
+  name: starj.ui5.table
+resources:
+  configuration:
+    propertiesFileSourceEncoding: UTF-8

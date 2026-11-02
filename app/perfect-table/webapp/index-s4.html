@@ -4,6 +4,19 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Perfect Table PoC (S/4HANA LREP)</title>
+	<script>
+		// starj.ui5.table 을 어디서 읽을지: 기본은 소스(lib/src), ?lib=dist 면 ui5 build 결과(library-preload.js)
+		(function () {
+			var isDist = /[?&]lib=dist(&|$)/.test(location.search);
+			window["sap-ui-config"] = {
+				resourceRoots: {
+					"poc.app": "./",
+					"starj.ui5.table": isDist ? "/lib/dist/resources/starj/ui5/table/" : "/lib/src/starj/ui5/table/"
+				},
+				"xx-libraryPreloadFiles": isDist ? "" : "starj.ui5.table:none"
+			};
+		})();
+	</script>
 	<script id="sap-ui-bootstrap"
 		src="https://ui5.sap.com/1.136.10/resources/sap-ui-core.js"
 		data-sap-ui-theme="sap_horizon"
@@ -12,9 +25,7 @@
 		data-sap-ui-async="true"
 		data-sap-ui-compat-version="edge"
 		data-sap-ui-flexibility-services='[{"connector":"LrepConnector","url":"/sap/bc/lrep"}]'
-		data-sap-ui-resource-roots='{"poc.app": "./", "mdpert.perfecttable": "/lib/mdpert/perfecttable/"}'
 		data-sap-ui-xx-componentPreload="off"
-		data-sap-ui-xx-libraryPreloadFiles="mdpert.perfecttable:none"
 		data-sap-ui-on-init="module:sap/ui/core/ComponentSupport">
 	</script>
 </head>

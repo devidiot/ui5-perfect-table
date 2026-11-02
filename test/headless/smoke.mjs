@@ -1,5 +1,6 @@
-// PoC 0 헤드리스 검증 (타일 홈 + 화면 5개, DynamicPage + PerfectFilter + PerfectTable). 서버(cds serve, 기본 4104)가 떠 있어야 한다.
+// PoC 0 헤드리스 검증 (타일 홈 + 화면 5개, DynamicPage + starj.ui5.table FilterBar·Table). 서버(cds serve, 기본 4104)가 떠 있어야 한다.
 //   node test/headless/smoke.mjs [baseUrl] [page]   page 기본 index.html(LocalStorage), index-s4.html 이면 S/4HANA LREP
+//   page 에 ?lib=dist 를 붙이면 라이브러리를 소스가 아니라 빌드 결과(lib/dist, library-preload.js)로 읽는다. 먼저 npm run build:lib
 import { chromium } from "playwright";
 import path from "node:path";
 import fs from "node:fs";
@@ -7,6 +8,7 @@ import fs from "node:fs";
 const BASE = process.argv[2] || "http://localhost:4104";
 const PAGE = process.argv[3] || "index.html";
 const IS_LREP = PAGE.includes("s4");
+const IS_DIST = PAGE.includes("lib=dist");
 const OUT = path.resolve("test/headless/out");
 fs.mkdirSync(OUT, { recursive: true });
 const pfx = (key) => `container-app---${key}--`;
@@ -64,6 +66,17 @@ await page.click(".sapMGT:has-text('OData V4 (온전)')");
 await waitEl(pfx("v4") + "table");
 check("홈 타일 → 화면 이동", (await page.evaluate(() => location.hash)) === "#/v4", await page.evaluate(() => location.hash));
 
+// 0-1. 라이브러리: 이름·로드 경로(소스/빌드)·컨트롤 클래스·한국어 문구
+await waitLoaded(pfx("v4") + "table", 1);
+const libInfo = await page.evaluate(() => {
+  const Lib = sap.ui.require("sap/ui/core/Lib"), E = sap.ui.require("sap/ui/core/Element");
+  const lib = Lib.all()["starj.ui5.table"];
+  const preload = performance.getEntriesByType("resource").some((r) => r.name.endsWith("/starj/ui5/table/library-preload.js"));
+  return { loaded: !!lib, version: lib && lib.version, preload, table: E.getElementById("container-app---v4--table").getMetadata().getName(),
+    filter: E.getElementById("container-app---v4--filter").getMetadata().getName(), addText: E.getElementById("container-app---v4--table--table--btnAdd").getText() };
+});
+check(`라이브러리 starj.ui5.table (${IS_DIST ? "빌드 결과" : "소스"})`, libInfo.loaded && libInfo.preload === IS_DIST && libInfo.table === "starj.ui5.table.Table" && libInfo.filter === "starj.ui5.table.FilterBar" && libInfo.addText === "행 추가", JSON.stringify(libInfo));
+
 const TABS = ["json", "v2", "v4", "legacyV2", "legacyV4"].map((key) => ({ key, pt: pfx(key) + "table" }));
 
 // 1. 다섯 소스 모두 300행 로드 + 스키마 (라벨·타입·쓰기 가능 여부·액션)
@@ -81,7 +94,7 @@ for (const t of TABS) {
   check(`${t.key} 라벨 (ProductID/Price/ReleaseDate)`, info.labels.join() === "제품 ID,단가,출시일", info.labels.join());
   const layout = await ui5((byId, key) => { const E = (id) => byId(id); const fb = E(key + "filter--filterbar"), vm = E(key + "filter--variant"), pg = E(key + "page");
     return { page: pg && pg.getMetadata().getName(), fb: !!fb, fbItems: fb && fb.getFilterItems().length, vm: vm && vm.getMetadata().getName(), filterAssoc: E(key + "table--table").getFilter() === (fb && fb.getId()) }; }, pfx(t.key));
-  check(`${t.key} DynamicPage + PerfectFilter 연결`, layout.page === "sap.f.DynamicPage" && layout.fb && layout.fbItems > 0 && layout.vm === "sap.ui.comp.smartvariants.SmartVariantManagement" && layout.filterAssoc, JSON.stringify(layout));
+  check(`${t.key} DynamicPage + FilterBar 연결`, layout.page === "sap.f.DynamicPage" && layout.fb && layout.fbItems > 0 && layout.vm === "sap.ui.comp.smartvariants.SmartVariantManagement" && layout.filterAssoc, JSON.stringify(layout));
   console.log(`      types=${info.types}\n      sample=${JSON.stringify(info.sample)}`);
   await page.screenshot({ path: path.join(OUT, `01-${t.key}.png`) });
 }

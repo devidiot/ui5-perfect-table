@@ -9,7 +9,9 @@
     "watch": "cds watch --port 4104",
     "test:headless": "node test/headless/smoke.mjs",
     "test:diag": "node test/headless/diag.mjs",
-    "gen:data": "node db/data/gen-products.js"
+    "gen:data": "node db/data/gen-products.js",
+    "build:lib": "npm --prefix lib run build",
+    "test:headless:dist": "node test/headless/smoke.mjs http://localhost:4104 'index.html?lib=dist'"
   },
   "dependencies": {
     "@cap-js-community/odata-v2-adapter": "^1",
